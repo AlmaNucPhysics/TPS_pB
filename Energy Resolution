@@ -1,0 +1,475 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Nov 22 12:04:50 2022
+
+@author: alma
+"""
+
+import numpy as np 
+import pandas as pd
+from topas2numpy import read_ntuple
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+#%%Simulation
+path =('/home/alma/PhD/TPS/New_TPS/SpartialResolution_TPS.phsp') 
+data=read_ntuple(path)
+data.dtype.names=('Position X (cm)',
+ 'Position Y (cm)',
+ 'Position Z (cm)',
+ 'Direction Cosine X',
+ 'Direction Cosine Y',
+ 'Energy (MeV)',
+'Weight',
+'Particle Type (in PDG Format)',
+'Flag to tell if Third Direction Cosine is Negative (1 means true)',
+'Flag to tell if this is the First Scored Particle from this History (1 means true)')
+x=data['Position X (cm)']
+y=data['Position Y (cm)']
+z=data['Position Z (cm)']
+cosX=data['Direction Cosine X']
+cosY=data['Direction Cosine Y']
+E=data['Energy (MeV)']
+w=data['Weight']
+ID=data['Particle Type (in PDG Format)']
+
+#%%% filtering the data using ID particle
+E_proton=E[ID==2212]
+E_alpha=E[ID==1000020040]
+x_proton=x[ID==2212]
+y_proton=y[ID==2212]
+x_gamma=x[ID==22]
+y_gamma=y[ID==22]
+x_neutron=x[ID==2112]
+y_neutron=y[ID==2112]
+x_electron=x[ID==11]
+y_electron=y[ID==11]
+x_alpha=x[ID==1000020040]
+y_alpha=y[ID==1000020040]
+
+#%%change the position of x 
+x_proton=x_proton+3
+x_alpha=x_alpha+3
+
+#%%Energy Resolution
+pinhole=0.01 #cm
+R_proton=np.sqrt(x_proton**2+y_proton**2)
+R_alpha=np.sqrt(x_alpha**2+y_alpha**2)
+a_proton=x_proton*np.sqrt(E_proton)
+a_alpha=x_alpha*np.sqrt(E_alpha)
+b_proton=y_proton*E_proton
+b_alpha=y_alpha*E_alpha
+
+delE_proton=(2*E_proton*pinhole/np.sqrt(4*b_proton**2+E_proton*a_proton**2))*100
+
+delE_alpha=(2*E_alpha*pinhole/np.sqrt(4*b_alpha**2+E_alpha*a_alpha**2))*100
+
+#%%Plot alpha & proton energy resolution
+fig=plt.figure()
+ax1=fig.add_subplot(111)
+ax1.scatter(E_proton,delE_proton,s=1,alpha=1,color='blue',label='Proton')
+ax1.set_xlabel('Proton energy, MeV')
+ax1.set_xticks((0,1,2,3,4,5))
+ax1.legend()
+ax2=ax1.twiny()
+ax2.scatter(E_alpha,delE_alpha,s=1,alpha=0.5,color='red',label='Alpha')
+ax2.set_xlabel('Alpha energy, MeV')
+ax1.legend(loc=0)
+ax2.legend(loc='best')
+ax1.set_ylabel('Energy resolution, %')
+ax1.grid()
+
+#%% X vs Y deflection
+pa=plt.scatter(x=x_proton, y=y_proton, c=E_proton,s=3,label='Proton simulation',cmap='cool') 
+cba=plt.colorbar(pa,label="Proton energy, MeV")
+pb=plt.scatter(x=x_alpha, y=y_alpha, c=E_alpha,s=3,label='Alpha simulation',cmap='autumn') 
+cpb=plt.colorbar(pb,label="Alpha energy, MeV")
+plt.grid()
+plt.xlabel('Magnetic deflection,cm')
+plt.ylabel('Electric deflection,cm')
+plt.show()
+
+#%% E vs BF deflection
+plt.scatter(E_proton,x_proton,s=1,color='blue',alpha=0.5,label='Proton')
+plt.scatter(E_alpha,x_alpha,s=1,color='red',alpha=0.5,label='Aplha')
+plt.legend(loc='best')
+plt.grid()
+plt.xlabel('E,MeV')
+plt.ylabel('B deflection,cm')
+
+#%% Plot energy
+ax=sns.distplot(E_alpha,hist=True,kde=True,label='Alpha energy spectrum')
+ax=sns.distplot(E_proton,hist=True,kde=True,label='Proton energy spectrum')
+ax.set(xlabel='Energy, MeV', ylabel='N, a.u.')
+ax.legend()
+plt.show()
+#%% Read the energy resolution for different sizes of Magnet length: 5,6.7.8.9.10.11.12.13.14.15 cm and B: 0.05-0.5 T
+ER=pd.read_csv('/home/alma/PhD/TPS/New_TPS/ER_pB.csv',skiprows=2)
+E_5_005=ER.iloc[:,0]
+ER_5_005=ER.iloc[:,1]
+E_5_01=ER.iloc[:,2]
+ER_5_01=ER.iloc[:,3]
+E_5_02=ER.iloc[:,4]
+ER_5_02=ER.iloc[:,5]
+E_5_03=ER.iloc[:,6]
+ER_5_03=ER.iloc[:,7]
+E_5_04=ER.iloc[:,8]
+ER_5_04=ER.iloc[:,9]
+E_5_05=ER.iloc[:,10]
+ER_5_05=ER.iloc[:,11]
+E_5_06=ER.iloc[:,12]
+ER_5_06=ER.iloc[:,13]
+
+E_6_005=ER.iloc[:,14]
+ER_6_005=ER.iloc[:,15]
+E_6_01=ER.iloc[:,16]
+ER_6_01=ER.iloc[:,17]
+E_6_02=ER.iloc[:,18]
+ER_6_02=ER.iloc[:,19]
+E_6_03=ER.iloc[:,20]
+ER_6_03=ER.iloc[:,21]
+E_6_04=ER.iloc[:,22]
+ER_6_04=ER.iloc[:,23]
+E_6_05=ER.iloc[:,24]
+ER_6_05=ER.iloc[:,25]
+
+E_7_005=ER.iloc[:,26]
+ER_7_005=ER.iloc[:,27]
+E_7_01=ER.iloc[:,28]
+ER_7_01=ER.iloc[:,29]
+E_7_02=ER.iloc[:,30]
+ER_7_02=ER.iloc[:,31]
+E_7_03=ER.iloc[:,32]
+ER_7_03=ER.iloc[:,33]
+E_7_04=ER.iloc[:,34]
+ER_7_04=ER.iloc[:,35]
+
+E_7_005=ER.iloc[:,26]
+ER_7_005=ER.iloc[:,27]
+E_7_01=ER.iloc[:,28]
+ER_7_01=ER.iloc[:,29]
+E_7_02=ER.iloc[:,30]
+ER_7_02=ER.iloc[:,31]
+E_7_03=ER.iloc[:,32]
+ER_7_03=ER.iloc[:,33]
+E_7_04=ER.iloc[:,34]
+ER_7_04=ER.iloc[:,35]
+
+E_8_005=ER.iloc[:,36]
+ER_8_005=ER.iloc[:,37]
+E_8_01=ER.iloc[:,38]
+ER_8_01=ER.iloc[:,39]
+E_8_02=ER.iloc[:,40]
+ER_8_02=ER.iloc[:,41]
+E_8_03=ER.iloc[:,42]
+ER_8_03=ER.iloc[:,43]
+E_8_035=ER.iloc[:,44]
+ER_8_035=ER.iloc[:,45]
+
+E_9_005=ER.iloc[:,46]
+ER_9_005=ER.iloc[:,47]
+E_9_01=ER.iloc[:,48]
+ER_9_01=ER.iloc[:,49]
+E_9_02=ER.iloc[:,50]
+ER_9_02=ER.iloc[:,51]
+E_9_03=ER.iloc[:,52]
+ER_9_03=ER.iloc[:,53]
+
+E_10_005=ER.iloc[:,54]
+ER_10_005=ER.iloc[:,55]
+E_10_01=ER.iloc[:,56]
+ER_10_01=ER.iloc[:,57]
+E_10_02=ER.iloc[:,58]
+ER_10_02=ER.iloc[:,59]
+
+E_11_005=ER.iloc[:,60]
+ER_11_005=ER.iloc[:,61]
+E_11_01=ER.iloc[:,62]
+ER_11_01=ER.iloc[:,63]
+E_11_015=ER.iloc[:,64]
+ER_11_015=ER.iloc[:,65]
+E_11_02=ER.iloc[:,66]
+ER_11_02=ER.iloc[:,67]
+
+E_12_005=ER.iloc[:,68]
+ER_12_005=ER.iloc[:,69]
+E_12_01=ER.iloc[:,70]
+ER_12_01=ER.iloc[:,71]
+E_12_015=ER.iloc[:,72]
+ER_12_015=ER.iloc[:,73]
+E_12_02=ER.iloc[:,74]
+ER_12_02=ER.iloc[:,75]
+
+E_13_005=ER.iloc[:,76]
+ER_13_005=ER.iloc[:,77]
+E_13_01=ER.iloc[:,78]
+ER_13_01=ER.iloc[:,79]
+E_13_015=ER.iloc[:,80]
+ER_13_015=ER.iloc[:,81]
+E_13_02=ER.iloc[:,82]
+ER_13_02=ER.iloc[:,83]
+
+E_14_005=ER.iloc[:,84]
+ER_14_005=ER.iloc[:,85]
+E_14_01=ER.iloc[:,86]
+ER_14_01=ER.iloc[:,87]
+E_14_015=ER.iloc[:,88]
+ER_14_015=ER.iloc[:,89]
+
+E_15_005=ER.iloc[:,90]
+ER_15_005=ER.iloc[:,91]
+E_15_01=ER.iloc[:,92]
+ER_15_01=ER.iloc[:,93]
+E_15_015=ER.iloc[:,94]
+ER_15_015=ER.iloc[:,95]
+
+#%%plot for magnet with a legth of 5 cm
+plt.figure()
+plt.plot(E_5_005,ER_5_005,'.',label='Lenght=5 cm, B=0.05 T')
+plt.plot(E_5_01,ER_5_01,'.',label='Lenght=5 c"m, B=0.1 T')
+plt.plot(E_5_02,ER_5_02,'.',label='Lenght=5 cm, B=0.2 T')
+plt.plot(E_5_03,ER_5_03,'.',label='Lenght=5 cm, B=0.3 T')
+plt.plot(E_5_04,ER_5_04,'.',label='Lenght=5 cm, B=0.4 T')
+plt.plot(E_5_05,ER_5_05,'.',label='Lenght=5 cm, B=0.5 T')
+plt.plot(E_5_06,ER_5_06,'.',label='Lenght=5 cm, B=0.6 T')
+plt.legend(loc='best',fontsize=8)
+plt.grid()
+plt.xlabel('Proton energy, MeV')
+plt.ylabel('Energy resolution, %')
+plt.show()
+
+#%%plot for magnet with a legth of 6 cm
+plt.figure()
+plt.plot(E_6_005,ER_6_005,'.',label='Lenght=6 cm, B=0.05 T')
+plt.plot(E_6_01,ER_6_01,'.',label='Lenght=6 cm, B=0.1 T')
+plt.plot(E_6_02,ER_6_02,'.',label='Lenght=6 cm, B=0.2 T')
+plt.plot(E_6_03,ER_6_03,'.',label='Lenght=6 cm, B=0.3 T')
+plt.plot(E_6_04,ER_6_04,'.',label='Lenght=6 cm, B=0.4 T')
+plt.plot(E_6_05,ER_6_05,'.',label='Lenght=6 cm, B=0.5 T')
+plt.legend(loc='best',fontsize=8)
+plt.grid()
+plt.xlabel('Proton energy, MeV')
+plt.ylabel('Energy resolution, %')
+plt.show() 
+
+#%%plot for magnet with a legth of 7 cm
+plt.figure()
+plt.plot(E_7_005,ER_7_005,'.',label='Lenght=7 cm, B=0.05 T')
+plt.plot(E_7_01,ER_7_01,'.',label='Lenght=7 cm, B=0.1 T')
+plt.plot(E_7_02,ER_7_02,'.',label='Lenght=7 cm, B=0.2 T')
+plt.plot(E_7_03,ER_7_03,'.',label='Lenght=7 cm, B=0.3 T')
+plt.plot(E_7_04,ER_7_04,'.',label='Lenght=7 cm, B=0.4 T')
+plt.legend(loc='best',fontsize=8)
+plt.grid()
+plt.xlabel('Proton energy, MeV')
+plt.ylabel('Energy resolution, %')
+plt.show()
+
+#%%plot for magnet with a legth of 8 cm
+plt.figure()
+plt.plot(E_8_005,ER_8_005,'.',label='Lenght=8 cm, B=0.05 T')
+plt.plot(E_8_01,ER_8_01,'.',label='Lenght=8 cm, B=0.1 T')
+plt.plot(E_8_02,ER_8_02,'.',label='Lenght=8 cm, B=0.2 T')
+plt.plot(E_8_03,ER_8_03,'.',label='Lenght=8 cm, B=0.3 T')
+plt.plot(E_8_035,ER_8_035,'.',label='Lenght=8 cm, B=0.35 T')
+plt.legend(loc='best',fontsize=8)
+plt.grid()
+plt.xlabel('Proton energy, MeV')
+plt.ylabel('Energy resolution, %')
+plt.show()
+
+#%%plot for magnet with a legth of 9 cm
+plt.figure()
+plt.plot(E_9_005,ER_9_005,'.',label='Lenght=9 cm, B=0.05 T')
+plt.plot(E_9_01,ER_9_01,'.',label='Lenght=9 cm, B=0.1 T')
+plt.plot(E_9_02,ER_9_02,'.',label='Lenght=9 cm, B=0.2 T')
+plt.plot(E_9_03,ER_9_03,'.',label='Lenght=9 cm, B=0.3 T')
+plt.legend(loc='best',fontsize=8)
+plt.grid()
+plt.xlabel('Proton energy, MeV')
+plt.ylabel('Energy resolution, %')
+plt.show()
+
+#%%plot for magnet with a legth of 10 cm
+plt.figure()
+plt.plot(E_10_005,ER_10_005,'.',label='Lenght=10 cm, B=0.05 T')
+plt.plot(E_10_01,ER_10_01,'.',label='Lenght=10 cm, B=0.1 T')
+plt.plot(E_10_02,ER_10_02,'.',label='Lenght=10 cm, B=0.2 T')
+plt.legend(loc='best',fontsize=8)
+plt.grid()
+plt.xlabel('Proton energy, MeV')
+plt.ylabel('Energy resolution, %')
+plt.show()
+
+#%%plot for magnet with a legth of 11 cm
+plt.figure()
+plt.plot(E_11_005,ER_11_005,'.',label='Lenght=11 cm, B=0.05 T')
+plt.plot(E_11_01,ER_11_01,'.',label='Lenght=11 cm, B=0.1 T')
+plt.plot(E_11_015,ER_11_015,'.',label='Lenght=11 cm, B=0.15 T')
+plt.plot(E_11_02,ER_11_02,'.',label='Lenght=11 cm, B=0.2 T')
+plt.legend(loc='best',fontsize=8)
+plt.grid()
+plt.xlabel('Proton energy, MeV')
+plt.ylabel('Energy resolution, %')
+plt.show()
+
+#%%plot for magnet with a legth of 12 cm
+plt.figure()
+plt.plot(E_12_005,ER_12_005,'.',label='Lenght=12 cm, B=0.05 T')
+plt.plot(E_12_01,ER_12_01,'.',label='Lenght=12 cm, B=0.1 T')
+plt.plot(E_12_015,ER_12_015,'.',label='Lenght=12 cm, B=0.15 T')
+plt.plot(E_12_02,ER_12_02,'.',label='Lenght=12 cm, B=0.2 T')
+plt.legend(loc='best',fontsize=8)
+plt.grid()
+plt.xlabel('Proton energy, MeV')
+plt.ylabel('Energy resolution, %')
+plt.show()
+
+#%%plot for magnet with a legth of 13 cm
+plt.figure()
+plt.plot(E_13_005,ER_13_005,'.',label='Lenght=13 cm, B=0.05 T')
+plt.plot(E_13_01,ER_13_01,'.',label='Lenght=13 cm, B=0.1 T')
+plt.plot(E_13_015,ER_13_015,'.',label='Lenght=13 cm, B=0.15 T')
+plt.plot(E_13_02,ER_13_02,'.',label='Lenght=13 cm, B=0.2 T')
+plt.legend(loc='best',fontsize=8)
+plt.grid()
+plt.xlabel('Proton energy, MeV')
+plt.ylabel('Energy resolution, %')
+plt.show()
+
+#%%plot for magnet with a legth of 14 cm
+plt.figure()
+plt.plot(E_14_005,ER_14_005,'.',label='Lenght=14 cm, B=0.05 T')
+plt.plot(E_14_01,ER_14_01,'.',label='Lenght=14 cm, B=0.1 T')
+plt.plot(E_14_015,ER_14_015,'.',label='Lenght=14 cm, B=0.15 T')
+plt.legend(loc='best',fontsize=8)
+plt.grid()
+plt.xlabel('Proton energy, MeV')
+plt.ylabel('Energy resolution, %')
+plt.show()
+
+#%%plot for magnet with a legth of 15 cm
+plt.figure()
+plt.plot(E_15_005,ER_15_005,'.',label='Lenght=15 cm, B=0.05 T')
+plt.plot(E_15_01,ER_15_01,'.',label='Lenght=15 cm, B=0.1 T')
+plt.plot(E_15_015,ER_15_015,'.',label='Lenght=15 cm, B=0.15 T')
+plt.legend(loc='best',fontsize=8)
+plt.grid()
+plt.xlabel('Proton energy, MeV')
+plt.ylabel('Energy resolution, %')
+plt.show()
+
+#%%plot Energy resolution on B=0.05 T, length=5.6.7.8.9.10.11.12.13.14.15 cm
+plt.figure()
+plt.plot(E_5_005, ER_5_005, '.', label='L=5 cm, B=0.05 T')
+plt.plot(E_6_005, ER_6_005, '.', label='L=6 cm, B=0.05 T')
+plt.plot(E_7_005, ER_7_005, '.', label='L=7 cm, B=0.05 T')
+plt.plot(E_8_005, ER_8_005, '.', label='L=8 cm, B=0.05 T')
+plt.plot(E_9_005, ER_9_005, '.', label='L=9 cm, B=0.05 T')
+plt.plot(E_10_005, ER_10_005, '.', label='L=10 cm, B=0.05 T')
+plt.plot(E_11_005, ER_11_005, '.', label='L=11 cm, B=0.05 T')
+plt.plot(E_12_005, ER_12_005, '.', label='L=12 cm, B=0.05 T')
+plt.plot(E_13_005, ER_13_005, '.', label='L=13 cm, B=0.05 T')
+plt.plot(E_14_005, ER_14_005, '.', label='L=14 cm, B=0.05 T')
+plt.plot(E_15_005, ER_15_005, '.', label='L=15 cm, B=0.05 T')
+plt.legend(loc='best',fontsize=8)
+plt.xlabel('Proton energy, MeV')
+plt.ylabel('Energy resolution, %')
+plt.grid()
+
+#%%plot Energy resolution on B=0.1 T, length=5.6.7.8.9.10.11.12.13.14.15 cm
+plt.figure()
+plt.plot(E_5_01, ER_5_01, '.', label='L=5 cm, B=0.1 T')
+plt.plot(E_6_01, ER_6_01, '.', label='L=6 cm, B=0.1 T')
+plt.plot(E_7_01, ER_7_01, '.', label='L=7 cm, B=0.1 T')
+plt.plot(E_8_01, ER_8_01, '.', label='L=8 cm, B=0.1 T')
+plt.plot(E_9_01, ER_9_01, '.', label='L=9 cm, B=0.1 T')
+plt.plot(E_10_01, ER_10_01, '.', label='L=10 cm, B=0.1 T')
+plt.plot(E_11_01, ER_11_01, '.', label='L=11 cm, B=0.1 T')
+plt.plot(E_12_01, ER_12_01, '.', label='L=12 cm, B=0.1 T')
+plt.plot(E_13_01, ER_13_01, '.', label='L=13 cm, B=0.1 T')
+plt.plot(E_14_01, ER_14_01, '.', label='L=14 cm, B=0.1 T')
+plt.plot(E_15_01, ER_15_01, '.', label='L=15 cm, B=0.1 T')
+plt.legend(loc='best',fontsize=8)
+plt.xlabel('Proton energy, MeV')
+plt.ylabel('Energy resolution, %')
+plt.grid()
+
+
+#%%plot Energy resolution on B=0.15 T, length=5.6.7.8.9.10.11.12.13.14.15 cm
+plt.figure()
+plt.plot(E_11_015, ER_11_015, '.', label='L=11 cm, B=0.15 T')
+plt.plot(E_12_015, ER_12_015, '.', label='L=12 cm, B=0.15 T')
+plt.plot(E_13_015, ER_13_015, '.', label='L=13 cm, B=0.15 T')
+plt.plot(E_14_015, ER_14_015, '.', label='L=14 cm, B=0.15 T')
+plt.plot(E_15_015, ER_15_015, '.', label='L=15 cm, B=0.15 T')
+plt.legend(loc='best',fontsize=8)
+plt.xlabel('Proton energy, MeV')
+plt.ylabel('Energy resolution, %')
+plt.grid()
+
+
+#%%plot Energy resolution on B=0.2 T, length=5.6.7.8.9.10.11.12.13.14.15 cm
+plt.figure()
+plt.plot(E_5_02, ER_5_02, '.', label='L=5 cm, B=0.2 T')
+plt.plot(E_6_02, ER_6_02, '.', label='L=6 cm, B=0.2 T')
+plt.plot(E_7_02, ER_7_02, '.', label='L=7 cm, B=0.2 T')
+plt.plot(E_8_02, ER_8_02, '.', label='L=8 cm, B=0.2 T')
+plt.plot(E_9_02, ER_9_02, '.', label='L=9 cm, B=0.2 T')
+plt.plot(E_10_02, ER_10_02, '.', label='L=10 cm, B=0.2 T')
+plt.plot(E_11_02, ER_11_02, '.', label='L=11 cm, B=0.2 T')
+plt.plot(E_12_02, ER_12_02, '.', label='L=12 cm, B=0.2 T')
+plt.plot(E_13_02, ER_13_02, '.', label='L=13 cm, B=0.2 T')
+plt.legend(loc='best',fontsize=8)
+plt.xlabel('Proton energy, MeV')
+plt.ylabel('Energy resolution, %')
+plt.grid()
+
+
+#%%plot Energy resolution on B=0.3 T, length=5.6.7.8.9.10.11.12.13.14.15 cm
+plt.figure()
+plt.plot(E_5_03, ER_5_03, '.', label='L=5 cm, B=0.3 T')
+plt.plot(E_6_03, ER_6_03, '.', label='L=6 cm, B=0.3 T')
+plt.plot(E_7_03, ER_7_03, '.', label='L=7 cm, B=0.3 T')
+plt.plot(E_8_03, ER_8_03, '.', label='L=8 cm, B=0.3 T')
+plt.plot(E_9_03, ER_9_03, '.', label='L=9 cm, B=0.3 T')
+plt.legend(loc='best',fontsize=8)
+plt.xlabel('Proton energy, MeV')
+plt.ylabel('Energy resolution, %')
+plt.grid()
+
+#%%plot Energy resolution on B=0.35 T, length=5.6.7.8.9.10.11.12.13.14.15 cm
+plt.figure()
+plt.plot(E_8_035, ER_8_035, '.', label='L=8 cm, B=0.35 T')
+plt.legend(loc='best',fontsize=8)
+plt.xlabel('Proton energy, MeV')
+plt.ylabel('Energy resolution, %')
+plt.grid()
+
+#%%plot Energy resolution on B=0.4 T, length=5.6.7.8.9.10.11.12.13.14.15 cm
+plt.figure()
+plt.plot(E_5_04, ER_5_04, '.', label='L=5 cm, B=0.4 T')
+plt.plot(E_6_04, ER_6_04, '.', label='L=6 cm, B=0.4 T')
+plt.plot(E_7_04, ER_7_04, '.', label='L=7 cm, B=0.4 T')
+plt.legend(loc='best',fontsize=8)
+plt.xlabel('Proton energy, MeV')
+plt.ylabel('Energy resolution, %')
+plt.grid()
+
+#%%plot Energy resolution on B=0.5 T, length=5.6.7.8.9.10.11.12.13.14.15 cm
+plt.figure()
+plt.plot(E_5_05, ER_5_05, '.', label='L=5 cm, B=0.5 T')
+plt.plot(E_6_05, ER_6_05, '.', label='L=6 cm, B=0.5 T')
+plt.legend(loc='best',fontsize=8)
+plt.xlabel('Proton energy, MeV')
+plt.ylabel('Energy resolution, %')
+plt.grid()
+
+#%%plot Energy resolution on B=06 T, length=5.6.7.8.9.10.11.12.13.14.15 cm
+plt.figure()
+plt.plot(E_5_06, ER_5_06, '.', label='L=5 cm, B=0.6 T')
+plt.legend(loc='best',fontsize=8)
+plt.xlabel('Proton energy, MeV')
+plt.ylabel('Energy resolution, %')
+plt.grid()
