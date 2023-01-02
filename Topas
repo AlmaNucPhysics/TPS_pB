@@ -1,0 +1,208 @@
+##############################################################################
+##########################    Detector #######################################
+##############################################################################
+s:Ge/World/Material = "Vacuum"
+d:Ge/World/HLX       = 200 cm
+d:Ge/World/HLY       = 200 cm
+d:Ge/World/HLZ       = 200 cm
+b:Ge/World/Invisible = "True"
+
+s:Ge/shield/Type="TsBox"
+s:Ge/shield/Parent="World"
+s:Ge/shield/Material="G4_BRASS"
+d:Ge/shield/HLX=4.5 cm
+d:Ge/shield/HLY=15 mm
+d:Ge/shield/HLZ=2.5 mm
+d:Ge/shield/TransX=0 cm
+d:Ge/shield/TransY=0 cm
+d:Ge/shield/TransZ=0 cm
+s:Ge/shield/Color="transGrey"
+iv:Gr/Color/transGrey =4 130 135 136 120
+s:Ge/shield/DrawingStyle="Solid"
+b:Ge/shield/Include="1"
+
+s:Ge/collimator/Type="TsCylinder"
+s:Ge/collimator/Parent="shield"
+s:Ge/collimator/Material="Vacuum"
+d:Ge/collimator/Rmin=0. mm
+d:Ge/collimator/Rmax=0.05 mm
+d:Ge/collimator/HL=Ge/shield/HLZ mm
+d:Ge/collimator/TransX=-3 cm
+d:Ge/collimator/TransY=0 cm
+d:Ge/collimator/TransZ=0 cm
+s:Ge/collimator/Color="Red"
+s:Ge/collimator/DrawingStyle="Solid"
+b:Ge/collimator/Include="1"
+
+######################################################################################
+########################### MAGNET ###################################################
+######################################################################################
+s:Ge/Magnet/Type="Group"
+s:Ge/Magnet/Parent="World"
+s:Ge/MagneticField/Type="TsBox"
+s:Ge/MagneticField/Parent="Magnet"
+s:Ge/MagneticField/Material="Vacuum"
+d:Ge/MagneticField/HLX=3.85 cm
+d:Ge/MagneticField/HLY=1 cm
+d:Ge/MagneticField/HLZ=3.5 cm
+s:Ge/MagneticField/Field="UniformElectroMagnetic"
+u:Ge/MagneticField/MagneticFieldDirectionX=0.0
+u:GE/MagneticField/MagneticFieldDirectionY=1.0
+u:Ge/MagneticField/MagneticFieldDirectionZ=0.0
+d:Ge/MagneticField/MagneticFieldStrength=0.1 tesla
+u:Ge/MagneticField/ElectricFieldDirectionX=0.0
+u:GE/MagneticField/ElectricFieldDirectionY=1.0
+u:Ge/MagneticField/ElectricFieldDirectionZ=0.0
+d:Ge/MagneticField/ElectricFieldStrength = 0 kV/cm
+d:Ge/MagneticField/TransX=0 cm
+d:Ge/MagneticField/TransY=0 cm
+d:Ge/MagneticField/TransZ1=Ge/collimator/TransZ - Ge/collimator/HL mm
+d:Ge/MagneticField/TransZ2=Ge/MagneticField/TransZ1 - Ge/MagneticField/HLZ mm
+d:Ge/MagneticField/TransZ=Ge/MagneticField/TransZ2 - 2 cm
+
+s:Ge/Magnetup/Type = "TsBox"
+s:Ge/Magnetup/Parent = "Magnet"
+s:Ge/Magnetup/Material = "G4_Nd"
+d:Ge/Magnetup/HLX = Ge/MagneticField/HLX mm
+d:Ge/Magnetup/HLY = 1 mm 
+d:Ge/Magnetup/HLZ = Ge/MagneticField/HLZ mm
+d:Ge/Magnetup/TransX = Ge/MagneticField/TransX cm
+d:Ge/Magnetup/TransY1 = Ge/MagneticField/TransY + Ge/MagneticField/HLY cm
+d:Ge/Magnetup/TransY = Ge/Magnetup/TransY1 + Ge/Magnetup/HLY cm
+d:Ge/Magnetup/TransZ = Ge/MagneticField/TransZ cm
+s:Ge/Magnetup/DrawingStyle = "Solid"
+s:Ge/Magnetup/Color = "Red"
+b:Ge/Magnetup/Include = "1"
+
+s:Ge/Magnetdown/Type = "TsBox"
+s:Ge/Magnetdown/Parent = "Magnet"
+s:Ge/Magnetdown/Material = "G4_Nd"
+d:Ge/Magnetdown/HLX = Ge/MagneticField/HLX mm
+d:Ge/Magnetdown/HLY = 1 mm 
+d:Ge/Magnetdown/HLZ = Ge/MagneticField/HLZ mm
+d:Ge/Magnetudown/TransX = Ge/MagneticField/TransX cm
+d:Ge/Magnetdown/TransY1 = Ge/MagneticField/TransY - Ge/MagneticField/HLY cm
+d:Ge/Magnetdown/TransY = Ge/Magnetdown/TransY1 - Ge/Magnetdown/HLY cm
+d:Ge/Magnetdown/TransZ = Ge/MagneticField/TransZ cm
+s:Ge/Magnetdown/DrawingStyle = "Solid"
+s:Ge/Magnetdown/Color = "Red"
+b:Ge/Magnetdown/Include = "1"
+
+######################################################################################
+########################### Electrode   ##############################################
+######################################################################################
+s:Ge/Electrode/Type="Group"
+s:Ge/Electrode/Parent="World"
+
+s:Ge/ElectricField/Type="TsBox"
+s:Ge/ElectricField/Parent="Electrode"
+s:Ge/ElectricField/Material="Vacuum"
+d:Ge/ElectricField/HLX=3.85 cm
+d:Ge/ElectricField/HLY=0.5 cm
+d:Ge/ElectricField/HLZ = 4 cm
+s:Ge/ElectricField/Field="UniformElectroMagnetic"
+u:Ge/ElectricField/MagneticFieldDirectionX=0.0
+u:GE/ElectricField/MagneticFieldDirectionY=1.0
+u:Ge/ElectricField/MagneticFieldDirectionZ=0.0
+d:Ge/ElectricField/MagneticFieldStrength=0.1 tesla
+u:Ge/ElectricField/ElectricFieldDirectionX=0.0
+u:GE/ElectricField/ElectricFieldDirectionY = 1.0
+u:Ge/ElectricField/ElectricFieldDirectionZ= 0.0
+d:Ge/ElectricField/ElectricFieldStrength = 15 kV/cm
+d:Ge/ElectricField/TransX=0 cm
+d:Ge/ElectricField/TransY=0 cm
+d:Ge/ElectricField/TransZTmp = Ge/MagneticField/TransZ - Ge/MagneticField/HLZ cm
+d:Ge/ElectricField/TransZ = Ge/ElectricField/TransZTmp - Ge/ElectricField/HLZ cm
+s:Ge/ElectricField/Color="Blue"
+s:Ge/ElectricField/DrawingStyle="FullWireFrame"
+b:Ge/ElectricField/Include="1"
+
+s:Ge/Electrodeup/Type = "TsBox"
+s:Ge/Electrodeup/Parent = "World"
+s:Ge/Electrodeup/Material = "G4_Co"
+d:Ge/Electrodeup/HLX = Ge/ElectricField/HLX mm
+d:Ge/Electrodeup/HLY = 1 mm 
+d:Ge/Electrodeup/HLZ = Ge/ElectricField/HLZ mm
+d:Ge/Electrodeup/TransX = Ge/ElectricField/TransX cm
+d:Ge/Electrodeup/TransY1 = Ge/ElectricField/TransY + Ge/ElectricField/HLY cm
+d:Ge/Electrodeup/TransY = Ge/Electrodeup/TransY1 + Ge/Electrodeup/HLY cm
+d:Ge/Electrodeup/TransZ = Ge/ElectricField/TransZ cm
+s:Ge/Electrodeup/DrawingStyle = "Solid"
+s:Ge/Electrodeup/Color = "Blue"
+b:Ge/Electrodeup/Include = "1"
+
+s:Ge/Electrodedown/Type = "TsBox"
+s:Ge/Electrodedown/Parent = "World"
+s:Ge/Electrodedown/Material = "G4_Co"
+d:Ge/Electrodedown/HLX = Ge/ElectricField/HLX mm
+d:Ge/Electrodedown/HLY = 1 mm 
+d:Ge/Electrodedown/HLZ = Ge/ElectricField/HLZ mm
+d:Ge/Electrodedown/TransX = Ge/ElectricField/TransX cm
+d:Ge/Electrodedown/TransY1 = Ge/ElectricField/TransY - Ge/ElectricField/HLY cm
+d:Ge/Electrodedown/TransY = Ge/Electrodedown/TransY1 - Ge/Electrodedown/HLY cm
+d:Ge/Electrodedown/TransZ = Ge/ElectricField/TransZ cm
+s:Ge/Electrodedown/DrawingStyle = "Solid"
+s:Ge/Electrodedown/Color = "Blue"
+b:Ge/Electrodedown/Include = "1"
+
+############################################################################################
+########################## SCORER #####################################################
+############################################################################################
+
+s:Ge/Detector/Type="TsCylinder"
+s:Ge/Detector/Parent="World"
+s:Ge/Detector/Material="G4_WATER"
+d:Ge/Detector/Rmin=0. cm
+d:Ge/Detector/Rmax=3.85 cm
+d:Ge/Detector/HL=0.5 cm
+dc:Ge/Detector/TransX=0 cm
+d:Ge/Detector/TransY = 2.85 cm
+d:Ge/Detector/TransZTmp = Ge/ElectricField/TransZ - Ge/ElectricField/HLZ cm
+d:Ge/Detector/TransZTmp2 = Ge/Detector/TransZTmp - Ge/Detector/HL cm
+d:Ge/Detector/TransZ = Ge/Detector/TransZTmp2 - 30 cm
+s:Ge/Detector/DrawingStyle = "Solid"
+s:Ge/Detector/Color = "steel"
+iv:Gr/Color/steel=4 90 90 90 150
+b:Ge/Detector/Include="1"
+
+sv:Ph/MyList/Modules = 9 "g4em-standard_opt4" "g4h-phy_QGSP_BIC_HP" "g4decay" "g4ion-binarycascade" "g4h-elastic_HP" "g4stopping" "g4em-penelope" "g4h-elastic_H" "g4h-inelastic_QBBC"
+
+#s:Gr/ViewA/Type="OpenGL"
+s:Gr/ViewA/Projection="Perspective"
+b:Gr/ViewA/HiddenLineRemovalForTrajectories="True"
+b:Gr/ViewA/Active="True"
+i:Gr/ViewA/MagneticFieldArrowDensity=10
+#b:Ts/UseQt = "1"
+b:Gr/ViewA/IncludeAxes       = "1"
+d:Gr/ViewA/AxesSize          = 50 cm
+s:Gr/ViewA/ColorBy                    = "particletype"
+sv:Gr/ViewA/ColorByParticleTypeNames  = 2 "proton" "alpha"
+sv:Gr/ViewA/ColorByParticleTypeColors = 2 "blue" "red"
+s:Gr/ViewA/BackgroundColor = "white"
+sv:Gr/OnlyIncludeParticlesFromProcess = 1 "primary"
+
+##############################################################################
+##########################    BEAM  ##########################################
+##############################################################################
+includeFile=./beam_proton_discrete.txt
+includeFile=./alpha_cont.txt
+
+s:Ge/BeamPosition/Parent="World"
+s:Ge/BeamPosition/Type="Group"
+
+d:Ge/BeamPosition/TransX = Ge/collimator/TransX cm
+d:Ge/BeamPosition/TransY = Ge/collimator/TransY cm
+d:Ge/BeamPosition/TransZ = Ge/collimator/TransZ + 3 cm
+d:Ge/BeamPosition/RotX=180 deg
+i:So/proton/NumberOfHistoriesInRun=10000
+i:So/alpha/NumberOfHistoriesInRun=10000
+##############################################################################
+##########################    Scorer  ########################################
+##############################################################################
+
+s:Sc/pB/Quantity                   = "PhaseSpace"
+b:Sc/pB/OutputToConsole            = "True"
+s:Sc/pB/Surface                    = "Detector/ZPlusSurface"
+s:Sc/pB/OutputType                 = "ASCII"
+s:Sc/pB/OutputFile                 = "SpartialResolution_TPS"
+s:Sc/pB/IfOutputFileAlreadyExists = "Overwrite"
