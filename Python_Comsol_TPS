@@ -1,0 +1,510 @@
+#%% Load necessary packages
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import constants
+import pandas as pd
+# from mpl_toolkits.mplot3d import Axes3D
+
+#%% Define design parameters
+
+pinholedia = 100E-6       #diameter of pinhole (in m)
+beamdia = 2*pinholedia    #beam spot size (in m)
+beam_pinhole = -20E-2     #distance between beam and pinhole (in m, taken along negative z-axis)
+
+pinhole_bfield = 2E-2                             #distance between pinhole and start of magnetic field (in m)
+bfield_start = beam_pinhole - pinhole_bfield      #magnetic field start (in m, taken along negative z-axis)
+bfield_end = bfield_start - 15E-2                 #magnetic field end (in m, taken along negative z-axis)
+bfield_sep = 2E-2                                 #separation between permanent magnet poles
+
+efield_start = bfield_start - 7E-2               #electric field start (in m, taken along negative z-axis)
+efield_stop = efield_start - 8E-2                 #electric field stop (in m, taken along negative z-axis)
+efield_sep = 1E-2                                 #separation between electrodes
+
+detector = bfield_end - 30E-2                     #distance between end of magnetic field end and detector (drift distance, negative z-axis)  
+
+#%% Sample beam particles (only protons)
+
+N = 10000                           #Number of particles to be sampled
+
+#array of the given shape d and populate it with random samples from a uniform distribution over [0, 1)
+t_ang = np.random.rand(N)         
+
+#array of the given shape d and populate it with random samples from a uniform distribution over [0, 1).
+t_rad = np.random.rand(N)         
+
+theta = 2*constants.pi*t_ang            #theta array
+r = (beamdia/2)*np.sqrt(t_rad)          #radius array
+
+x_init = r*np.cos(theta)           #x array
+x_init -= 3E-2                     #shift x array by -3 cm 
+y_init = r*np.sin(theta)           #y array
+z_init = 0                         #z array (set to 0 at beam position)
+
+#%% Plot initial sampling of particles (spatial only)
+
+plt.figure()                                 #block for plot purposes
+plt.scatter(x_init,y_init, marker=".")
+plt.axis("equal")
+plt.xlabel('x, m')
+plt.ylabel('y, m')
+plt.grid()
+plt.show()
+
+#%% Sample beam particles into energy bins
+
+en_low_limit = 0.5       #lower limit of proton energy (in MeV)
+en_up_limit = 5       #upper limit of proton energy (in MeV)
+
+en_dist = np.random.uniform(en_low_limit,en_up_limit,N)    #uniform sampling in energy (changeable)
+
+#%% Plot initial sampling of particles (energy only)
+
+plt.figure()                               #block for plot purposes
+plt.hist(en_dist,bins=10)
+plt.xlabel('Energy bins (MeV)')
+plt.ylabel('Number of particles')
+plt.grid()
+plt.show()
+
+#%% Sample initial velocity components of particles (from initial energy)
+
+A = 1               #mass number of proton (dimensionless)
+mp = 1.6E-27        #absolute mass of proton (in kg)
+c = 3E8             #speed of light (in m/s)
+q = 1.6E-19         #charge of proton (in C)
+
+vx_init = np.zeros(len(en_dist))              #set angular spread along x-axis to 0
+vy_init = np.zeros(len(en_dist))              #set angular spread along y-axis to 0
+
+en_dist_SI = en_dist*1.6E-13     #convert kinetic energy from MeV to J
+
+vz_init = -(c*np.sqrt((en_dist_SI**2)+(2*en_dist_SI*A*mp*(c**2))))/(en_dist_SI+A*mp*(c**2))    #calculate velocity component along z-axis
+
+#%% Plot intial velocities of particles
+
+plt.figure()                            #block for plot purposes
+plt.hist(vz_init,bins=10)
+plt.xlabel('Velocity bins (m/s)')
+plt.ylabel('Number of particles')
+plt.grid()
+plt.show()
+
+#%% Transport particles to pinhole and resample
+
+time = abs(beam_pinhole/vz_init)       #Calculate time required by each particle to reach pinhole from beam position
+x_temp = x_init + vx_init*time         #Transport along X-axis
+y_temp = y_init + vy_init*time         #Transport along Y-axis
+z_temp = z_init + vz_init*time         #Transport along Z-axis
+vx_temp = vx_init                      #No change in velocity along X-axis
+vy_temp = vy_init                      #No change in velocity along Y-axis
+vz_temp = vz_init                      #No change in velocity along Z-axis
+
+check = np.sqrt((x_temp+3E-2)**2+y_temp**2)<=(pinholedia/2)
+
+x_fin = x_temp[check]       #Select subset of particles' x-coordinate passing through pinhole
+y_fin = y_temp[check]       #Select subset of particles' y-coordinate passing through pinhole 
+z_fin = z_temp[check]       #Select subset of particles' z-coordinate passing through pinhole
+vx_fin = vx_temp[check]     #Select subset of particles' x-velocity passing through pinhole
+vy_fin = vy_temp[check]     #Select subset of particles' y-velocity passing through pinhole
+vz_fin = vz_temp[check]     #Select subset of particles' z-velocity passing through pinhole
+
+del x_temp,y_temp,z_temp,vx_temp,vy_temp,vz_temp        #Clear memeory of temporary variables
+
+#%% Plot comparative scatter plots (before and after pinhole)
+
+plt.figure()                              #block for plot purposes
+plt.scatter(x_init*1E2,y_init*1E2, marker=".",label='Initial beam')
+plt.scatter(x_fin*1E2,y_fin*1E2, marker=".",label='Colimated beam')
+plt.axis("equal")
+plt.xlabel('x, cm')
+plt.ylabel('y, cm')
+plt.legend()
+plt.grid()
+plt.show()
+
+#%% Define table of magnetostatic and electrostatic fields
+
+#Read comsol file for magnetostatic field
+fileB="/home/alma/Documents/Field/MF.txt"
+cols_B=['x','y','z','bx','by','bz','b']
+df_B=pd.read_fwf(fileB,names=cols_B,skiprows=1)
+
+Bx=np.asarray(df_B['bx'])
+By=np.asarray(df_B['by'])
+Bz=np.asarray(df_B['bz'])
+B=np.asarray(df_B['b'])
+
+#Generate grid of points for magnetostatic field
+x_Bgrid = np.linspace(-3.85E-2,3.85E-2,50)                 #generate array of linearly spaced magnetic grid points along X-axis (from -3.85 cm to 3.85 cm)
+delX_B = x_Bgrid[1]-x_Bgrid[0]                       #store distance between grid points along X-axis
+y_Bgrid = np.linspace(-bfield_sep/2,bfield_sep/2,50) #generate array of linearly spaced magnetic grid points along Y-axis (defined by pole separation)
+delY_B = y_Bgrid[1]-y_Bgrid[0]                       #store distance between grid points along Y-axis
+z_Bgrid = np.linspace(bfield_start,bfield_end,50)    #generate array of linearly spaced magnetic grid points along Z-axis (defined by active length)
+delZ_B = z_Bgrid[1]-z_Bgrid[0]                       #store distance between grid points along Z-axis
+xB, yB, zB = np.meshgrid(x_Bgrid,y_Bgrid,z_Bgrid,indexing='ij')     #generate meshgrid of points for defining magnetic field
+Bx_grid=np.reshape(Bx,(50,50,50),order='F')
+By_grid=np.reshape(By,(50,50,50),order='F')
+Bz_grid=np.reshape(Bz,(50,50,50),order='F')
+
+#Read comsol file for electrostatic field
+fileE="/home/alma/Documents/Field/EF.csv"
+colsE=['x','y','z','ex','ey','ez','e']
+#df=pd.read_fwf(file,names=cols,skiprows=10)
+df_E=pd.read_csv(fileE,delimiter=',',names=colsE,skiprows=1)
+Ex=np.asarray(df_E['ex'])
+Ey=np.asarray(df_E['ey'])
+Ez=np.asarray(df_E['ez'])
+E=np.asarray(df_E['e'])
+
+#Generate grid of points for electrostatic field
+x_Egrid = np.linspace(-3.85E-2,3.85E-2,50)                 #generate array of linearly spaced electric grid points along X-axis (from -3.85 cm to 3.85 cm)   
+delX_E=x_Egrid[1]-x_Egrid[0]                         #store distance between grid points along X-axis
+y_Egrid = np.linspace(-efield_sep/2,efield_sep/2,50) #generate array of linearly spaced electric grid points along Y-axis (defined by pole separation)
+delY_E=y_Egrid[1]-y_Egrid[0]                         #store distance between grid points along X-axis
+z_Egrid = np.linspace(efield_start,efield_stop,50)   #generate array of linearly spaced electric grid points along Z-axis (defined by active length)
+delZ_E=z_Egrid[1]-z_Egrid[0]                         #store distance between grid points along X-axis
+xE, yE, zE = np.meshgrid(x_Egrid,y_Egrid,z_Egrid,indexing='ij')    #generate meshgrid of points for defining electric field  
+Ex_grid=np.reshape(Ex,(50,50,50),order='F')
+Ey_grid=np.reshape(Ey,(50,50,50),order='F')
+Ez_grid=np.reshape(Ez,(50,50,50),order='F')
+
+#%% Plot electrostatic and magnetostatic fields
+
+ax = plt.figure().add_subplot(111, projection='3d')            #block for plot purposes
+ax.quiver(xB, yB, zB, Bx_grid, By_grid, Bz_grid, length=0.001, normalize=True, color='r', lw=2,alpha=0.05)
+ax.quiver(xE, yE, zE, Ex_grid, Ey_grid, Ez_grid, length=0.001, normalize=True, color='b', lw=2,alpha=0.05)
+plt.grid()
+ax.set_xlabel('X,m')
+ax.set_ylabel('Y,m')
+ax.set_zlabel('Z,m')
+ax.set_aspect(aspect='auto')
+# ax.invert_zaxis()
+plt.show()
+
+#%% Define functions to implement Boris method
+
+def Mag_Transport(x,y,z,vx,vy,vz,Bx,By,Bz,Tstep):          #Function to model transport in pure magnetic field
+    Bnorm=np.sqrt(Bx**2+By**2+Bz**2)     #Calcute norm of B-field at n
+    bx = Bx/Bnorm                        #Calculate unit vector of B-field along X-axis
+    by = By/Bnorm                        #Calculate unit vector of B-field along Y-axis  
+    bz = Bz/Bnorm                        #Calculate unit vector of B-field along Z-axis 
+    
+    gamma=1/np.sqrt(1-(vx**2+vy**2+vz**2)/(c**2))        #Evaluate relativistic gamma-factor from v at n-1/2                                                                                          
+    ux=gamma*vx                                          #Evaluate ux component at n-1/2
+    uy=gamma*vy                                          #Evaluate uy component at n-1/2 
+    uz=gamma*vz                                          #Evaluate uz component at n-1/2
+    ux_meno=ux                                           #Set intermediate u-x term to ux at n-1/2 (no E)
+    uy_meno=uy                                           #Set intermediate u-y term to uy at n-1/2 (no E)
+    uz_meno=uz                                           #Set intermediate u-z term to uz at n-1/2 (no E)
+    t=Tstep*(q/(A*mp))*Bnorm/gamma                       #Evaluate gyrophase angle around B at n 
+    #Evaluate u+x from u-x at n-1/2
+    ux_piu=(np.cos(t)+(bx**2)*(1-np.cos(t)))*ux_meno+(bx*by*(1-np.cos(t))+bz*np.sin(t))*uy_meno+(bz*bx*(1-np.cos(t))-by*np.sin(t))*uz_meno      
+    #Evaluate u+y from u-y at n-1/2
+    uy_piu=(bx*by*(1-np.cos(t))-bz*np.sin(t))*ux_meno+(np.cos(t)+(by**2)*(1-np.cos(t)))*uy_meno+(by*bz*(1-np.cos(t))+bx*np.sin(t))*uz_meno      
+    #Evaluate u+z from u-z at n-1/2
+    uz_piu=(bx*bz*(1-np.cos(t))+by*np.sin(t))*ux_meno+(by*bz*(1-np.cos(t))-bx*np.sin(t))*uy_meno+(np.cos(t)+(bz**2)*(1-np.cos(t)))*uz_meno      
+    ux=ux_piu                                            #Set updated ux at n+1/2 to intermediate u+x term
+    uy=uy_piu                                            #Set updated uy at n+1/2 to intermediate u+y term
+    uz=uz_piu                                            #Set updated uz at n+1/2 to intermediate u+z term
+    gamma=np.sqrt(1+(ux**2+uy**2+uz**2)/(c**2))          #Evaluate relativistic gamma-factor from u at n+1/2
+    vx_fin=ux/gamma                                      #Update vx component (n-1/2 to n+1/2)
+    vy_fin=uy/gamma                                      #Update vy component (n-1/2 to n+1/2) 
+    vz_fin=uz/gamma                                      #Update vz component (n=1/2 to n+1/2)
+    
+    x_fin = x + vx_fin*Tstep                 #Update x-coordinate from n to n+1 using vx at n+1/2
+    y_fin = y + vy_fin*Tstep                 #Update y-coordinate from n to n+1 using vy at n+1/2
+    z_fin = z + vz_fin*Tstep                 #Update z-coordinate from n to n+1 using vz at n+1/2
+    
+    return x_fin,y_fin,z_fin,vx_fin,vy_fin,vz_fin
+
+def ElMag_Transport(x,y,z,vx,vy,vz,Bx,By,Bz,Ex,Ey,Ez,Tstep):    #Function to model transport in electric and magnetic field       
+    Bnorm=np.sqrt(Bx**2+By**2+Bz**2)     #Calcute norm of B-field at n
+    bx = Bx/Bnorm                        #Calculate unit vector of B-field along X-axis
+    by = By/Bnorm                        #Calculate unit vector of B-field along Y-axis  
+    bz = Bz/Bnorm                        #Calculate unit vector of B-field along Z-axis
+    
+    eps_x=(q/(2*A*mp))*Ex                #Calculate quantity related to X-component of E-field at n
+    eps_y=(q/(2*A*mp))*Ey                #Calculate quantity related to X-component of E-field at n
+    eps_z=(q/(2*A*mp))*Ez                #Calculate quantity related to X-component of E-field at n  
+
+    gamma=1/np.sqrt(1-(vx**2+vy**2+vz**2)/(c**2))          #Evaluate relativistic gamma-factor from v at n-1/2                                                                                              
+    ux=gamma*vx                                            #Evaluate ux component at n-1/2
+    uy=gamma*vy                                            #Evaluate uy component at n-1/2 
+    uz=gamma*vz                                            #Evaluate uz component at n-1/2
+    ux_meno=ux+eps_x*Tstep                                 #Calculate intermediate u-x term from ux at n-1/2 and Ex at n                                                                                                 
+    uy_meno=uy+eps_y*Tstep                                 #Calculate intermediate u-y term from ux at n-1/2 and Ey at n                                                                                                  
+    uz_meno=uz+eps_z*Tstep                                 #Calculate intermediate u-z term from ux at n-1/2 and Ez at n                                                                                                 
+    t=Tstep*(q/(A*mp))*Bnorm/gamma                         #Evaluate gyrophase angle around B at n 
+    #Evaluate u+x from u-x at n-1/2
+    ux_piu=(np.cos(t)+(bx**2)*(1-np.cos(t)))*ux_meno+(bx*by*(1-np.cos(t))+bz*np.sin(t))*uy_meno+(bz*bx*(1-np.cos(t))-by*np.sin(t))*uz_meno
+    #Evaluate u+y from u-y at n-1/2      
+    uy_piu=(bx*by*(1-np.cos(t))-bz*np.sin(t))*ux_meno+(np.cos(t)+(by**2)*(1-np.cos(t)))*uy_meno+(by*bz*(1-np.cos(t))+bx*np.sin(t))*uz_meno 
+    #Evaluate u+z from u-z at n-1/2      
+    uz_piu=(bx*bz*(1-np.cos(t))+by*np.sin(t))*ux_meno+(by*bz*(1-np.cos(t))-bx*np.sin(t))*uy_meno+(np.cos(t)+(bz**2)*(1-np.cos(t)))*uz_meno      
+    ux=ux_piu+eps_x*Tstep                                  #Calculate updated ux at n+1/2 from u+x term and Ex at n
+    uy=uy_piu+eps_y*Tstep                                  #Calculate updated uy at n+1/2 from u+y term and Ey at n
+    uz=uz_piu+eps_z*Tstep                                  #Calculate updated uz at n+1/2 from u+z term and Ez at n
+    gamma=np.sqrt(1+(ux**2+uy**2+uz**2)/(c**2))            #Evaluate relativistic gamma-factor from u at n+1/2
+    vx_fin=ux/gamma                                        #Update vx component (n-1/2 to n+1/2)
+    vy_fin=uy/gamma                                        #Update vy component (n-1/2 to n+1/2) 
+    vz_fin=uz/gamma                                        #Update vz component (n-1/2 to n+1/2)
+
+    x_fin = x + vx_fin*Tstep                 #Update x-coordinate from n to n+1 using vx at n+1/2
+    y_fin = y + vy_fin*Tstep                 #Update y-coordinate from n to n+1 using vy at n+1/2
+    z_fin = z + vz_fin*Tstep                 #Update z-coordinate from n to n+1 using vz at n+1/2                                                                                                                   
+    
+    return x_fin,y_fin,z_fin,vx_fin,vy_fin,vz_fin
+
+#%% Initiate beam transport
+
+#Transport beam to edge of magnetic field
+time = abs(pinhole_bfield/vz_fin)               #Calculate time required by each particle to reach edge of B-field from pinhole    
+x_fin = x_fin + vx_fin*time                     #Transport along X-axis
+y_fin = y_fin + vy_fin*time                     #Transport along Y-axis
+z_fin = z_fin + vz_fin*time                     #Transport along Z-axis
+vx_fin = vx_fin                                 #No change in velocity along X-axis
+vy_fin = vy_fin                                 #No change in velocity along Y-axis  
+vz_fin = vz_fin                                 #No change in velocity along Z-axis
+
+#Initiate transport in pure magnetic field
+Tstep = abs(delZ_B/np.max(vz_fin))/10                        #Set iteration time step as 10% of minimum time required to travel between grid point                    
+Tspan = abs((efield_start-bfield_start)/np.min(vz_fin))*50   #Set simulation time as 50*max time required required to traverse the magnetic zone
+t = 0                                                        #Initialise time counter to 0   
+flag = 0                                                     #For signalling when to append to transported particle arrays 
+flag_loss = 0                                                #For signalling when to append to lost particle arrays
+x_temp = x_fin                                               #Make temporary copy of x-coordinate of particles at edge of B-field
+y_temp = y_fin                                               #Make temporary copy of y-coordinate of particles at edge of B-field
+z_temp = z_fin                                               #Make temporary copy of z-coordinate of particles at edge of B-field
+vx_temp = vx_fin                                             #Make temporary copy of x-velocity of particles at edge of B-field
+vy_temp = vy_fin                                             #Make temporary copy of y-velocity of particles at edge of B-field
+vz_temp = vz_fin                                             #Make temporary copy of z-velocity of particles at edge of B-field
+while (t<=Tspan):                                            #Initiate loop for magnetic transport
+    ind_row = np.floor((x_temp - x_Bgrid[0])/delX_B)         #Round to lowest neighboring grid point (row index corresponds to X-grid) 
+    ind_row = [ int(x) for x in ind_row ]                    #Convert floating point number to integer index
+    ind_col = np.floor((y_temp - y_Bgrid[0])/delY_B)         #Round to lowest neighboring grid point (column index corresponds to Y-grid)
+    ind_col = [ int(x) for x in ind_col ]                    #Convert floating point number to integer index
+    ind_dep = np.floor((z_temp - z_Bgrid[0])/delZ_B)         #Round to lowest neighboring grid point (depth index corresponds to Z-grid)
+    ind_dep = [ int(x) for x in ind_dep ]                    #Convert floating point number to integer inde
+    Bx = np.zeros(np.shape(ind_row))                         #Initialise B-field grid points to 0 (size = number of particles to be tracked)
+    By = np.zeros(np.shape(ind_row))
+    Bz = np.zeros(np.shape(ind_row))
+    
+    for i in range(len(ind_row)):                            #Calculate average B-field components at particles' position through interpolation
+        Bx[i] = (Bx_grid[ind_row[i],ind_col[i],ind_dep[i]]+Bx_grid[ind_row[i]+1,ind_col[i],ind_dep[i]]+
+                 Bx_grid[ind_row[i],ind_col[i]+1,ind_dep[i]]+Bx_grid[ind_row[i]+1,ind_col[i]+1,ind_dep[i]]+
+                 Bx_grid[ind_row[i],ind_col[i],ind_dep[i]+1]+Bx_grid[ind_row[i]+1,ind_col[i],ind_dep[i]+1]+
+                 Bx_grid[ind_row[i],ind_col[i]+1,ind_dep[i]+1]+Bx_grid[ind_row[i]+1,ind_col[i]+1,ind_dep[i]+1])/8
+        By[i] = (By_grid[ind_row[i],ind_col[i],ind_dep[i]]+By_grid[ind_row[i]+1,ind_col[i],ind_dep[i]]+
+                 By_grid[ind_row[i],ind_col[i]+1,ind_dep[i]]+By_grid[ind_row[i]+1,ind_col[i]+1,ind_dep[i]]+
+                 By_grid[ind_row[i],ind_col[i],ind_dep[i]+1]+By_grid[ind_row[i]+1,ind_col[i],ind_dep[i]+1]+
+                 By_grid[ind_row[i],ind_col[i]+1,ind_dep[i]+1]+By_grid[ind_row[i]+1,ind_col[i]+1,ind_dep[i]+1])/8
+        Bz[i] = (Bz_grid[ind_row[i],ind_col[i],ind_dep[i]]+Bz_grid[ind_row[i]+1,ind_col[i],ind_dep[i]]+
+                 Bz_grid[ind_row[i],ind_col[i]+1,ind_dep[i]]+Bz_grid[ind_row[i]+1,ind_col[i]+1,ind_dep[i]]+
+                 Bz_grid[ind_row[i],ind_col[i],ind_dep[i]+1]+Bz_grid[ind_row[i]+1,ind_col[i],ind_dep[i]+1]+
+                 Bz_grid[ind_row[i],ind_col[i]+1,ind_dep[i]+1]+Bz_grid[ind_row[i]+1,ind_col[i]+1,ind_dep[i]+1])/8
+    
+    #Run pure magnetic transport code and update positions and velocities
+    x_temp,y_temp,z_temp,vx_temp,vy_temp,vz_temp = Mag_Transport(x_temp,y_temp,z_temp,vx_temp,vy_temp,vz_temp,Bx,By,Bz,Tstep)
+    t += Tstep                                                #Update time step
+    #Check for particle confinement in magnetic zone
+    conf = (x_temp>x_Bgrid[0])&(x_temp<x_Bgrid[len(x_Bgrid)-1])&(y_temp>y_Bgrid[0])&(y_temp<y_Bgrid[len(y_Bgrid)-1]) 
+    
+    if (np.sum(not(conf.all()))>0):                                 #If particles lost...
+        if (flag_loss==0):                                          #If lost for first time...
+            x_loss = x_temp[not(conf.all())]                        #Generate array to store x-coordinates of lost particles
+            y_loss = y_temp[not(conf.all())]                        #Generate array to store y-coordinates of lost particles
+            z_loss = z_temp[not(conf.all())]                        #Generate array to store z-coordinates of lost particles
+            vx_loss = vx_temp[not(conf.all())]                      #Generate array to store x-velocity of lost particles
+            vy_loss = vy_temp[not(conf.all())]                      #Generate array to store y-velocity of lost particles
+            vz_loss = vz_temp[not(conf.all())]                      #Generate array to store z-velocity of lost particles
+            flag_loss = 1                                           #Change flag_loss to signal already generated lost particle arrays 
+        else:                                                       #If lost for not the first time... 
+            x_loss = np.append(x_loss,x_temp[not(conf.all())])      #Update array of x-coordinates of lost particles
+            y_loss = np.append(y_loss,y_temp[not(conf.all())])      #Update array of y-coordinates of lost particles
+            z_loss = np.append(z_loss,z_temp[not(conf.all())])      #Update array of z-coordinates of lost particles
+            vx_loss = np.append(vx_loss,vx_temp[not(conf.all())])   #Update array of x-velocity of lost particles
+            vy_loss = np.append(vy_loss,vy_temp[not(conf.all())])   #Update array of y-velocity of lost particles
+            vz_loss = np.append(vz_loss,vz_temp[not(conf.all())])   #Update array of z-velocity of lost particles 
+            
+        temp_varX = x_temp                     #Temporary array of x-coordinates of particles still in play
+        temp_varY = y_temp                     #Temporary array of y-coordinates of particles still in play 
+        z_temp = z_temp[conf]                  #Select subset of z-coordinates belonging to confined particles 
+        vx_temp = vx_temp[conf]                #Select subset of x-velocity belonging to confined particles
+        vy_temp = vy_temp[conf]                #Select subset of y-velocity belonging to confined particles
+        vz_temp = vz_temp[conf]                #Select subset of z-velocity belonging to confined particles  
+        x_temp = temp_varX[conf]               #Select subset of x-coordinates belonging to confined particles 
+        y_temp = temp_varY[conf]               #Select subset of y-coordinates belonging to confined particles 
+        del temp_varX, temp_varY               #Clear memory of unnecessary variables
+        
+    if (len(z_temp)==0):                       #If all particles lost or in E-field zone...
+        print("All particles in electrostatic field zone or lost - exiting...")
+        break                                  #No particles left to track in pure B-field zone, break and move to E and B-field transport
+    else:                                      #If some particles still left in pure B-field zone...
+        if (flag!=0):                                              #If particles reached E-field zone for not the first time...
+            x_fin = np.append(x_fin,x_temp[z_temp<efield_start])     #Update array of x-coordinates of transported particles
+            y_fin = np.append(y_fin,y_temp[z_temp<efield_start])     #Update array of y-coordinates of transported particles
+            z_fin = np.append(z_fin,z_temp[z_temp<efield_start])     #Update array of z-coordinates of transported particles
+            vx_fin = np.append(vx_fin,vx_temp[z_temp<efield_start])  #Update array of x-velocity of transported particles
+            vy_fin = np.append(vy_fin,vy_temp[z_temp<efield_start])  #Update array of x-velocity of transported particles
+            vz_fin = np.append(vz_fin,vz_temp[z_temp<efield_start])  #Update array of x-velocity of transported particles
+        else:                                                       #If particles reached E-field zone for not the first time...
+            x_fin = x_temp[z_temp<efield_start]                      #Generate array of x-coordinates of transported particles
+            y_fin = y_temp[z_temp<efield_start]                      #Generate array of y-coordinates of transported particles 
+            z_fin = z_temp[z_temp<efield_start]                      #Generate array of z-coordinates of transported particles
+            vx_fin = vx_temp[z_temp<efield_start]                    #Generate array of x-velocity of transported particles
+            vy_fin = vy_temp[z_temp<efield_start]                    #Generate array of x-velocity of transported particles
+            vz_fin = vz_temp[z_temp<efield_start]                    #Generate array of x-velocity of transported particles
+            flag=1
+        
+        x_temp = x_temp[z_temp>efield_start]         #Select subset of x-coordinates belonging to non-transported particles
+        y_temp = y_temp[z_temp>efield_start]         #Select subset of y-coordinates belonging to non-transported particles  
+        vx_temp = vx_temp[z_temp>efield_start]       #Select subset of z-coordinates belonging to non-transported particles
+        vy_temp = vy_temp[z_temp>efield_start]       #Select subset of x-velocity belonging to non-transported particles 
+        vz_temp = vz_temp[z_temp>efield_start]       #Select subset of y-velocity belonging to non-transported particles
+        z_temp = z_temp[z_temp>efield_start]         #Select subset of z-velocity belonging to non-transported particles
+        
+del x_temp,y_temp,z_temp,vx_temp,vy_temp,vz_temp     #Clear memory of unnecessary variables
+
+#Initiate transport in electric and magnetic field
+Tstep = abs(delZ_E/np.max(vz_fin))/10
+Tspan = abs((efield_stop-efield_start)/np.min(vz_fin))*50
+t = 0
+flag = 0
+x_temp = x_fin
+y_temp = y_fin
+z_temp = z_fin
+vx_temp = vx_fin
+vy_temp = vy_fin
+vz_temp = vz_fin
+while (t<=Tspan):
+    ind_row_B = np.ceil((x_temp - x_Bgrid[0])/delX_B)
+    ind_row_B = [ int(x) for x in ind_row_B ]
+    ind_col_B = np.ceil((y_temp - y_Bgrid[0])/delY_B)
+    ind_col_B = [ int(x) for x in ind_col_B ]
+    ind_dep_B = np.ceil((z_temp - z_Bgrid[0])/delZ_B)
+    ind_dep_B = [ int(x) for x in ind_dep_B ]
+    Bx = np.zeros(np.shape(ind_row_B))
+    By = np.zeros(np.shape(ind_row_B))
+    Bz = np.zeros(np.shape(ind_row_B))
+    
+    for i in range(len(ind_row_B)):
+        Bx[i] = (Bx_grid[ind_row_B[i],ind_col_B[i],ind_dep_B[i]]+Bx_grid[ind_row_B[i]-1,ind_col_B[i],ind_dep_B[i]]+
+                 Bx_grid[ind_row_B[i],ind_col_B[i]-1,ind_dep_B[i]]+Bx_grid[ind_row_B[i]-1,ind_col_B[i]-1,ind_dep_B[i]]+
+                 Bx_grid[ind_row_B[i],ind_col_B[i],ind_dep_B[i]-1]+Bx_grid[ind_row_B[i]-1,ind_col_B[i],ind_dep_B[i]-1]+
+                 Bx_grid[ind_row_B[i],ind_col_B[i]-1,ind_dep_B[i]-1]+Bx_grid[ind_row_B[i]-1,ind_col_B[i]-1,ind_dep_B[i]-1])/8
+        By[i] = (By_grid[ind_row_B[i],ind_col_B[i],ind_dep_B[i]]+By_grid[ind_row_B[i]-1,ind_col_B[i],ind_dep_B[i]]+
+                 By_grid[ind_row_B[i],ind_col_B[i]-1,ind_dep_B[i]]+By_grid[ind_row_B[i]-1,ind_col_B[i]-1,ind_dep_B[i]]+
+                 By_grid[ind_row_B[i],ind_col_B[i],ind_dep_B[i]-1]+By_grid[ind_row_B[i]-1,ind_col_B[i],ind_dep_B[i]-1]+
+                 By_grid[ind_row_B[i],ind_col_B[i]-1,ind_dep_B[i]-1]+By_grid[ind_row_B[i]-1,ind_col_B[i]-1,ind_dep_B[i]-1])/8
+        Bz[i] = (Bz_grid[ind_row_B[i],ind_col_B[i],ind_dep_B[i]]+Bz_grid[ind_row_B[i]-1,ind_col_B[i],ind_dep_B[i]]+
+                 Bz_grid[ind_row_B[i],ind_col_B[i]-1,ind_dep_B[i]]+Bz_grid[ind_row_B[i]-1,ind_col_B[i]-1,ind_dep_B[i]]+
+                 Bz_grid[ind_row_B[i],ind_col_B[i],ind_dep_B[i]-1]+Bz_grid[ind_row_B[i]-1,ind_col_B[i],ind_dep_B[i]-1]+
+                 Bz_grid[ind_row_B[i],ind_col_B[i]-1,ind_dep_B[i]-1]+Bz_grid[ind_row_B[i]-1,ind_col_B[i]-1,ind_dep_B[i]-1])/8
+    
+    ind_row_E = np.ceil((x_temp - x_Egrid[0])/delX_E)
+    ind_row_E = [ int(x) for x in ind_row_E ]
+    ind_col_E = np.ceil((y_temp - y_Egrid[0])/delY_E)
+    ind_col_E = [ int(x) for x in ind_col_E ]
+    ind_dep_E = np.ceil((z_temp - z_Egrid[0])/delZ_E)
+    ind_dep_E = [ int(x) for x in ind_dep_E ]
+    
+    Ex = np.zeros(np.shape(ind_row_E))
+    Ey = np.zeros(np.shape(ind_row_E))
+    Ez = np.zeros(np.shape(ind_row_E))
+    
+    for i in range(len(ind_row_E)):
+        Ex[i] = (Ex_grid[ind_row_E[i],ind_col_E[i],ind_dep_E[i]]+Ex_grid[ind_row_E[i]-1,ind_col_E[i],ind_dep_E[i]]+
+                 Ex_grid[ind_row_E[i],ind_col_E[i]-1,ind_dep_E[i]]+Ex_grid[ind_row_E[i]-1,ind_col_E[i]-1,ind_dep_E[i]]+
+                 Ex_grid[ind_row_E[i],ind_col_E[i],ind_dep_E[i]-1]+Ex_grid[ind_row_E[i]-1,ind_col_E[i],ind_dep_E[i]-1]+
+                 Ex_grid[ind_row_E[i],ind_col_E[i]-1,ind_dep_E[i]-1]+Ex_grid[ind_row_E[i]-1,ind_col_E[i]-1,ind_dep_E[i]-1])/8
+        Ey[i] = (Ey_grid[ind_row_E[i],ind_col_E[i],ind_dep_E[i]]+Ey_grid[ind_row_E[i]-1,ind_col_E[i],ind_dep_E[i]]+
+                 Ey_grid[ind_row_E[i],ind_col_E[i]-1,ind_dep_E[i]]+Ey_grid[ind_row_E[i]-1,ind_col_E[i]-1,ind_dep_E[i]]+
+                 Ey_grid[ind_row_E[i],ind_col_E[i],ind_dep_E[i]-1]+Ey_grid[ind_row_E[i]-1,ind_col_E[i],ind_dep_E[i]-1]+
+                 Ey_grid[ind_row_E[i],ind_col_E[i]-1,ind_dep_E[i]-1]+Ey_grid[ind_row_E[i]-1,ind_col_E[i]-1,ind_dep_E[i]-1])/8
+        Ez[i] = (Ez_grid[ind_row_E[i],ind_col_E[i],ind_dep_E[i]]+Ez_grid[ind_row_E[i]-1,ind_col_E[i],ind_dep_E[i]]+
+                 Ez_grid[ind_row_E[i],ind_col_E[i]-1,ind_dep_E[i]]+Ez_grid[ind_row_E[i]-1,ind_col_E[i]-1,ind_dep_E[i]]+
+                 Ez_grid[ind_row_E[i],ind_col_E[i],ind_dep_E[i]-1]+Ez_grid[ind_row_E[i]-1,ind_col_E[i],ind_dep_E[i]-1]+
+                 Ez_grid[ind_row_E[i],ind_col_E[i]-1,ind_dep_E[i]-1]+Ez_grid[ind_row_E[i]-1,ind_col_E[i]-1,ind_dep_E[i]-1])/8
+            
+    x_temp,y_temp,z_temp,vx_temp,vy_temp,vz_temp = ElMag_Transport(x_temp,y_temp,z_temp,vx_temp,vy_temp,vz_temp,Bx,By,Bz,Ex,Ey,Ez,Tstep)
+    t+=Tstep
+    conf = (x_temp>x_Bgrid[0])&(x_temp<x_Bgrid[len(x_Bgrid)-1])&(y_temp>y_Egrid[0])&(y_temp<y_Egrid[len(y_Bgrid)-1]) 
+    if (np.sum(not(conf.all()))>0):
+        if (flag_loss==0):
+            x_loss = x_temp[not(conf.all())]
+            y_loss = y_temp[not(conf.all())]
+            z_loss = z_temp[not(conf.all())]
+            vx_loss = vx_temp[not(conf.all())]
+            vy_loss = vy_temp[not(conf.all())]
+            vz_loss = vz_temp[not(conf.all())]
+            flag_loss = 1
+        else:
+            x_loss = np.append(x_loss,x_temp[not(conf.all())])
+            y_loss = np.append(y_loss,y_temp[not(conf.all())])
+            z_loss = np.append(z_loss,z_temp[not(conf.all())])
+            vx_loss = np.append(vx_loss,vx_temp[not(conf.all())])
+            vy_loss = np.append(vy_loss,vy_temp[not(conf.all())])
+            vz_loss = np.append(vz_loss,vz_temp[not(conf.all())])
+            
+        temp_varX = x_temp
+        temp_varY = y_temp
+        z_temp = z_temp[conf]
+        vx_temp = vx_temp[conf]
+        vy_temp = vy_temp[conf]
+        vz_temp = vz_temp[conf]
+        x_temp = temp_varX[conf]
+        y_temp = temp_varY[conf]
+        del temp_varX, temp_varY
+        
+    if (len(z_temp)==0):
+        print("All particles beyond EM field zone - exiting...")
+        break
+    else:
+        if (flag!=0):
+            x_fin = np.append(x_fin,x_temp[z_temp<efield_stop])
+            y_fin = np.append(y_fin,y_temp[z_temp<efield_stop])
+            z_fin = np.append(z_fin,z_temp[z_temp<efield_stop])
+            vx_fin = np.append(vx_fin,vx_temp[z_temp<efield_stop])
+            vy_fin = np.append(vy_fin,vy_temp[z_temp<efield_stop])
+            vz_fin = np.append(vz_fin,vz_temp[z_temp<efield_stop])
+        else:
+            x_fin = x_temp[z_temp<efield_stop]
+            y_fin = y_temp[z_temp<efield_stop]
+            z_fin = z_temp[z_temp<efield_stop]
+            vx_fin = vx_temp[z_temp<efield_stop]
+            vy_fin = vy_temp[z_temp<efield_stop]
+            vz_fin = vz_temp[z_temp<efield_stop]
+            flag=1
+        
+        x_temp = x_temp[z_temp>efield_stop]
+        y_temp = y_temp[z_temp>efield_stop]
+        vx_temp = vx_temp[z_temp>efield_stop]
+        vy_temp = vy_temp[z_temp>efield_stop]
+        vz_temp = vz_temp[z_temp>efield_stop]
+        z_temp = z_temp[z_temp>efield_stop]
+
+del x_temp,y_temp,z_temp,vx_temp,vy_temp,vz_temp
+
+##Transport beam to detector
+time = abs((detector-z_fin)/vz_fin)         #Calculate time required by each particle to reach detector from previous z-coordinate
+x_fin = x_fin + vx_fin*time                 #Transport along X-axis
+y_fin = y_fin + vy_fin*time                 #Transport along Y-axis
+z_fin = z_fin + vz_fin*time                 #Transport along Z-axis
+vx_fin = vx_fin                             #No change in velocity along X-axis 
+vy_fin = vy_fin                             #No change in velocity along Y-axis
+vz_fin = vz_fin                             #No change in velocity along Z-axis
+
+#%% shift pinhole alomg x
+x_fin = x_fin + 3E-2 #shift the pinhole along x axis
+
+#%% plot parabola
+plt.figure()
+plt.scatter(x_topas,y_topas,label='Topas simulation',s=2)
+plt.scatter(x_fin*1E2,y_fin*1E2,s=1,marker='o',label='Python simulation')
+plt.scatter(x_analytic,y_analytic,marker="x",label='Analytical solution')
+plt.legend()
+plt.xlabel('B deflection, cm')
+plt.ylabel('E deflection, cm')
+plt.grid()
+plt.show()  
