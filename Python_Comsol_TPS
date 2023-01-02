@@ -500,9 +500,7 @@ x_fin = x_fin + 3E-2 #shift the pinhole along x axis
 
 #%% plot parabola
 plt.figure()
-plt.scatter(x_topas,y_topas,label='Topas simulation',s=2)
 plt.scatter(x_fin*1E2,y_fin*1E2,s=1,marker='o',label='Python simulation')
-plt.scatter(x_analytic,y_analytic,marker="x",label='Analytical solution')
 plt.legend()
 plt.xlabel('B deflection, cm')
 plt.ylabel('E deflection, cm')
