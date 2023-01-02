@@ -42,19 +42,14 @@ ID=data['Particle Type (in PDG Format)']
 E_proton=E[ID==2212]
 E_alpha=E[ID==1000020040]
 E_gamma=E[ID==22]
-
 x_proton=x[ID==2212]
 y_proton=y[ID==2212]
-
 x_gamma=x[ID==22]
 y_gamma=y[ID==22]
-
 x_neutron=x[ID==2112]
 y_neutron=y[ID==2112]
-
 x_electron=x[ID==11]
 y_electron=y[ID==11]
-
 x_alpha=x[ID==1000020040]
 y_alpha=y[ID==1000020040]
 
