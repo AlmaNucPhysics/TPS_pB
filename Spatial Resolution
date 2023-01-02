@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Nov 30 10:40:45 2022
+
+@author: alma
+"""
+
+
+import numpy as np 
+import pandas as pd
+from topas2numpy import read_ntuple
+from shapely.geometry import LineString, Point
+import matplotlib.pyplot as plt
+import seaborn as sns
+import shapely
+from scipy.optimize import curve_fit 
+
+#%%Simulation
+path =('/home/alma/PhD/TPS/New_TPS/SpartialResolution_TPS.phsp') 
+data=read_ntuple(path)
+data.dtype.names=('Position X (cm)',
+ 'Position Y (cm)',
+ 'Position Z (cm)',
+ 'Direction Cosine X',
+ 'Direction Cosine Y',
+ 'Energy (MeV)',
+'Weight',
+'Particle Type (in PDG Format)',
+'Flag to tell if Third Direction Cosine is Negative (1 means true)',
+'Flag to tell if this is the First Scored Particle from this History (1 means true)')
+x=data['Position X (cm)']
+y=data['Position Y (cm)']
+z=data['Position Z (cm)']
+cosX=data['Direction Cosine X']
+cosY=data['Direction Cosine Y']
+E=data['Energy (MeV)']
+w=data['Weight']
+ID=data['Particle Type (in PDG Format)']
+
+#%%% filtering the data using ID particle
+E_proton=E[ID==2212]
+E_alpha=E[ID==1000020040]
+E_gamma=E[ID==22]
+
+x_proton=x[ID==2212]
+y_proton=y[ID==2212]
+
+x_gamma=x[ID==22]
+y_gamma=y[ID==22]
+
+x_neutron=x[ID==2112]
+y_neutron=y[ID==2112]
+
+x_electron=x[ID==11]
+y_electron=y[ID==11]
+
+x_alpha=x[ID==1000020040]
+y_alpha=y[ID==1000020040]
+
+#%%cutting the lowest energetic proton
+index=np.where(E_proton<0.4)
+E_proton=np.delete(E_proton,index)
+x_proton=np.delete(x_proton,index)
+y_proton=np.delete(y_proton,index)
+
+#%%change the position of x 
+x_proton=x_proton + 3
+x_alpha=x_alpha + 3
+
+#%% X vs Y deflection
+pa=plt.scatter(x=x_proton, y=y_proton, c=E_proton,s=3,label='Proton simulation',cmap='cool') 
+cba=plt.colorbar(pa,label="Proton energy, MeV")
+pb=plt.scatter(x=x_alpha, y=y_alpha, c=E_alpha,s=3,label='Alpha simulation',cmap='autumn') 
+cpb=plt.colorbar(pb,label="Alpha energy, MeV")
+plt.grid()
+plt.xlabel('Magnetic deflection,cm')
+plt.ylabel('Electric deflection,cm')
+plt.show()
+
+#%%Find a value for EF min
+def find_nearest(array,value):
+    array=np.asarray(array)
+    idx=(np.abs(array-value)).argmin()
+    return array[idx]
+
+#%%difference between two points - Spatial resolution
+x1=x_proton.min()
+y1=y_proton[x_proton==x1]
+x2=find_nearest(x_alpha, x1)
+y2=y_alpha[x_alpha==x2]
+diff=y2-y1
+print(diff)
+
+#%% E vs EF deflection
+plt.scatter(E_proton,y_proton,s=1,color='blue',alpha=0.5,label='Proton')
+plt.scatter(E_alpha,y_alpha,s=1,color='red',alpha=0.5,label='Aplha')
+plt.legend(loc='best')
+plt.grid()
+plt.xlabel('E,MeV')
+plt.ylabel('E deflection,cm')
